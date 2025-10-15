@@ -53,7 +53,7 @@ def train_embeddings(
     min_freq=5,
     max_corpus_chars=1000000,
     eval_interval=1,
-    device='cuda' if torch.cuda.is_available() else 'cpu',
+    device=None,
     seed=42
 ):
     """
@@ -73,6 +73,16 @@ def train_embeddings(
         device: device to train on
         seed: random seed
     """
+    if device is None:
+        if torch.cuda.is_available():
+            device = 'cuda'
+        elif torch.backends.mps.is_available():
+            device = 'mps'
+        else:
+            device = 'cpu'
+    
+    print(f"Using device: {device}")
+    
     torch.manual_seed(seed)
     np.random.seed(seed)
     

@@ -16,7 +16,12 @@ def run_all_manifolds(embedding_dim=100, num_epochs=10, device=None):
     """Run experiments for all manifold types."""
     
     if device is None:
-        device = 'cuda' if torch.cuda.is_available() else 'cpu'
+        if torch.cuda.is_available():
+            device = 'cuda'
+        elif torch.backends.mps.is_available():
+            device = 'mps'
+        else:
+            device = 'cpu'
     
     print(f"Using device: {device}")
     
@@ -72,7 +77,12 @@ def run_single_experiment(
     """Run a single experiment with specified parameters."""
     
     if device is None:
-        device = 'cuda' if torch.cuda.is_available() else 'cpu'
+        if torch.cuda.is_available():
+            device = 'cuda'
+        elif torch.backends.mps.is_available():
+            device = 'mps'
+        else:
+            device = 'cpu'
     
     print(f"\n{'='*60}")
     print(f"Training {embedding_dim}D embeddings on {manifold.upper()} manifold")

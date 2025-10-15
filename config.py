@@ -20,7 +20,15 @@ class Config:
     eval_interval = 100
     eval_iters = 50
     
-    device = 'cuda' if __import__('torch').cuda.is_available() else 'cpu'
+    torch = __import__('torch')
+    if torch.cuda.is_available():
+        device = 'cuda'
+    elif torch.backends.mps.is_available():
+        device = 'mps'
+    else:
+        device = 'cpu'
+    
+    print(f"Config initialized - Using device: {device}")
     
     wandb_api_key = os.getenv('WANDB_API_KEY')
     wandb_entity = os.getenv('WANDB_ENTITY')
