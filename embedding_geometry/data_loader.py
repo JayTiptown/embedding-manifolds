@@ -43,12 +43,12 @@ class WordSimDataset:
     
     def load_data(self):
         """Load WordSim-353 dataset from Hugging Face."""
-        dataset = load_dataset("Word2vec/word_similarity", "wordsim_similarity", split="test")
+        dataset = load_dataset("almogtavor/WordSim353", split="train")
         
         for item in dataset:
-            word1 = item['word1'].lower()
-            word2 = item['word2'].lower()
-            score = float(item['score'])
+            word1 = str(item['Word 1']).lower()
+            word2 = str(item['Word 2']).lower()
+            score = float(item['Human (Mean)'])
             self.pairs.append((word1, word2, score))
     
     def __len__(self):
@@ -71,16 +71,16 @@ class GoogleAnalogyDataset:
     
     def load_data(self):
         """Load Google Analogies dataset from Hugging Face."""
-        dataset = load_dataset("google_analogies", split="test")
+        dataset = load_dataset("almogtavor/google-analogy-dataset", split="train")
         
         for item in dataset:
-            category = item.get('category', 'semantic')
+            category = str(item['Subject'])
             self.analogies.append({
                 'category': category,
-                'a': item['word1'].lower(),
-                'b': item['word2'].lower(),
-                'c': item['word3'].lower(),
-                'd': item['word4'].lower()
+                'a': str(item['Word1']).lower(),
+                'b': str(item['Word2']).lower(),
+                'c': str(item['Word3']).lower(),
+                'd': str(item['Word4']).lower()
             })
     
     def __len__(self):

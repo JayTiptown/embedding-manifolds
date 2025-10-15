@@ -1,7 +1,5 @@
 import torch
 import torch.nn as nn
-import sys
-sys.path.append('..')
 from manifolds import sphere_project, stiefel_project
 
 

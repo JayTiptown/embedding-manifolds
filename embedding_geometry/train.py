@@ -4,10 +4,10 @@ from tqdm import tqdm
 import wandb
 import numpy as np
 
-from data_loader import Vocabulary, SkipGramDataset, load_text_corpus, WordSimDataset, GoogleAnalogyDataset
-from models import WordEmbeddings, NegativeSamplingLoss
-from evaluation import evaluate_word_similarity, evaluate_analogies, compute_embedding_statistics, get_nearest_neighbors
-from visualization import log_embeddings_to_wandb, visualize_analogy, create_manifold_geometry_plot
+from .data_loader import Vocabulary, SkipGramDataset, load_text_corpus, WordSimDataset, GoogleAnalogyDataset
+from .models import WordEmbeddings, NegativeSamplingLoss
+from .evaluation import evaluate_word_similarity, evaluate_analogies, compute_embedding_statistics, get_nearest_neighbors
+from .visualization import log_embeddings_to_wandb, visualize_analogy, create_manifold_geometry_plot
 
 
 def train_epoch(model, dataloader, criterion, optimizer, epoch, device, log_interval=100):

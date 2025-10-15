@@ -9,7 +9,7 @@ and evaluates them on WordSim-353 and Google Analogies benchmarks.
 import argparse
 import torch
 import wandb
-from train import train_embeddings
+from .train import train_embeddings
 
 
 def run_all_manifolds(embedding_dim=100, num_epochs=10, device=None):
