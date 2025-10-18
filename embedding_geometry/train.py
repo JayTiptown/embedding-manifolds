@@ -8,6 +8,7 @@ from .data_loader import Vocabulary, SkipGramDataset, load_text_corpus, WordSimD
 from .models import WordEmbeddings, NegativeSamplingLoss
 from .evaluation import evaluate_word_similarity, evaluate_analogies, compute_embedding_statistics, get_nearest_neighbors
 from .visualization import log_embeddings_to_wandb, visualize_analogy, create_manifold_geometry_plot
+from optimizers import ManifoldMuon, SphereOptimizer
 
 
 def train_epoch(model, dataloader, criterion, optimizer, epoch, device, log_interval=100):
@@ -125,7 +126,13 @@ def train_embeddings(
     model = model.to(device)
     
     criterion = NegativeSamplingLoss(num_negatives=num_negatives)
-    optimizer = torch.optim.Adam(model.parameters(), lr=learning_rate)
+    
+    if manifold == 'stiefel':
+        optimizer = ManifoldMuon(model.parameters(), lr=learning_rate)
+    elif manifold == 'sphere':
+        optimizer = SphereOptimizer(model.parameters(), lr=learning_rate)
+    else:
+        optimizer = torch.optim.Adam(model.parameters(), lr=learning_rate)
     
     sample_words = ['king', 'queen', 'man', 'woman', 'computer', 'science', 
                    'dog', 'cat', 'car', 'truck', 'happy', 'sad']

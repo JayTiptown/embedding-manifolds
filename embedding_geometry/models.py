@@ -30,12 +30,8 @@ class WordEmbeddings(nn.Module):
                 self.embeddings.copy_(sphere_project(self.embeddings))
                 self.context_embeddings.copy_(sphere_project(self.context_embeddings))
             elif self.manifold == 'stiefel':
-                if self.vocab_size > self.embedding_dim:
-                    self.embeddings.copy_(stiefel_project(self.embeddings.T).T)
-                    self.context_embeddings.copy_(stiefel_project(self.context_embeddings.T).T)
-                else:
-                    self.embeddings.copy_(stiefel_project(self.embeddings))
-                    self.context_embeddings.copy_(stiefel_project(self.context_embeddings))
+                self.embeddings.copy_(stiefel_project(self.embeddings))
+                self.context_embeddings.copy_(stiefel_project(self.context_embeddings))
     
     def project_to_manifold(self):
         """Project embeddings back to manifold after gradient update."""
@@ -47,12 +43,8 @@ class WordEmbeddings(nn.Module):
                 self.embeddings.copy_(sphere_project(self.embeddings))
                 self.context_embeddings.copy_(sphere_project(self.context_embeddings))
             elif self.manifold == 'stiefel':
-                if self.vocab_size > self.embedding_dim:
-                    self.embeddings.copy_(stiefel_project(self.embeddings.T).T)
-                    self.context_embeddings.copy_(stiefel_project(self.context_embeddings.T).T)
-                else:
-                    self.embeddings.copy_(stiefel_project(self.embeddings))
-                    self.context_embeddings.copy_(stiefel_project(self.context_embeddings))
+                self.embeddings.copy_(stiefel_project(self.embeddings))
+                self.context_embeddings.copy_(stiefel_project(self.context_embeddings))
     
     def forward(self, center_ids, context_ids):
         """
