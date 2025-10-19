@@ -1,1 +1,3 @@
-# embedding-manifolds
+# Modular Embedding Manifold Experiments
+
+This repo contains experiments building off the research from [Thinking Machines](https://thinkingmachines.ai/), specifically in regards to their research on [Modular Manifolds](https://thinkingmachines.ai/blog/modular-manifolds/). Within the blog post, the authors specify future research directions, a subset of which I explore. This takes the direction of exploring modularity, regularization, and non-riemannian geometry as a means of exploring how different manifolds may have inherent geometric properties for modeling language and semantics via transformer architectures. 
