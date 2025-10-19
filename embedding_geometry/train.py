@@ -11,7 +11,7 @@ from .visualization import log_embeddings_to_wandb, visualize_analogy, create_ma
 from optimizers import ManifoldMuon, SphereOptimizer
 
 
-def train_epoch(model, dataloader, criterion, optimizer, epoch, device, log_interval=100):
+def train_epoch(model, dataloader, criterion, optimizer, epoch, device, log_interval=100, use_manifold_optimizer=False):
     """Train for one epoch."""
     model.train()
     total_loss = 0
@@ -31,7 +31,8 @@ def train_epoch(model, dataloader, criterion, optimizer, epoch, device, log_inte
         
         optimizer.step()
         
-        model.project_to_manifold()
+        if not use_manifold_optimizer:
+            model.project_to_manifold()
         
         total_loss += loss.item()
         num_batches += 1
@@ -127,6 +128,7 @@ def train_embeddings(
     
     criterion = NegativeSamplingLoss(num_negatives=num_negatives)
     
+    use_manifold_optimizer = manifold in ['stiefel', 'sphere']
     if manifold == 'stiefel':
         optimizer = ManifoldMuon(model.parameters(), lr=learning_rate)
     elif manifold == 'sphere':
@@ -139,7 +141,8 @@ def train_embeddings(
     
     print(f"\nStarting training...")
     for epoch in range(1, num_epochs + 1):
-        train_loss = train_epoch(model, dataloader, criterion, optimizer, epoch, device)
+        train_loss = train_epoch(model, dataloader, criterion, optimizer, epoch, device, 
+                                use_manifold_optimizer=use_manifold_optimizer)
         
         print(f"\nEpoch {epoch}/{num_epochs} - Train Loss: {train_loss:.4f}")
         
