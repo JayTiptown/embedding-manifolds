@@ -9,7 +9,11 @@ This package implements word embeddings with different geometric constraints:
 The package includes:
 - Data loading for WordSim-353 and Google Analogies benchmarks
 - Skip-gram training with negative sampling
-- Evaluation metrics (similarity correlation, analogy accuracy)
+- Comprehensive evaluation metrics:
+  * Performance: similarity correlation, analogy accuracy
+  * Distortion: Precision@k, rank distortion
+  * Geometric quality: isotropy, triangle inequality
+  * Capacity: participation ratio, intrinsic dimensionality
 - 2D/3D visualizations with wandb
 """
 
@@ -30,7 +34,10 @@ from .evaluation import (
     evaluate_word_similarity,
     evaluate_analogies,
     compute_embedding_statistics,
-    get_nearest_neighbors
+    get_nearest_neighbors,
+    compute_distortion_metrics,
+    compute_geometric_quality_metrics,
+    compute_capacity_metrics
 )
 
 from .visualization import (
@@ -54,6 +61,9 @@ __all__ = [
     'evaluate_analogies',
     'compute_embedding_statistics',
     'get_nearest_neighbors',
+    'compute_distortion_metrics',
+    'compute_geometric_quality_metrics',
+    'compute_capacity_metrics',
     'visualize_embeddings',
     'log_embeddings_to_wandb',
     'visualize_analogy',

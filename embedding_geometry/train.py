@@ -6,7 +6,9 @@ import numpy as np
 
 from .data_loader import Vocabulary, SkipGramDataset, load_text_corpus, WordSimDataset, GoogleAnalogyDataset
 from .models import WordEmbeddings, NegativeSamplingLoss
-from .evaluation import evaluate_word_similarity, evaluate_analogies, compute_embedding_statistics, get_nearest_neighbors
+from .evaluation import (evaluate_word_similarity, evaluate_analogies, compute_embedding_statistics, 
+                         get_nearest_neighbors, compute_distortion_metrics, 
+                         compute_geometric_quality_metrics, compute_capacity_metrics)
 from .visualization import log_embeddings_to_wandb, visualize_analogy, create_manifold_geometry_plot
 from optimizers import ManifoldMuon, SphereOptimizer
 
@@ -161,13 +163,34 @@ def train_embeddings(
                 
                 embedding_stats = compute_embedding_statistics(model)
                 
+                print(f"\n=== Performance Metrics ===")
                 print(f"WordSim-353: ρ={wordsim_corr:.4f} ({wordsim_pairs} pairs)")
                 print(f"Analogies: Acc={analogy_acc:.4f} ({analogy_total} questions)")
-                print(f"Embedding stats: mean_norm={embedding_stats['mean_norm']:.4f}, "
-                      f"intrinsic_dim_90={embedding_stats['intrinsic_dim_90']}")
                 
                 for cat, acc in category_accs.items():
                     print(f"  {cat}: {acc:.4f}")
+                
+                print(f"\n=== Embedding Statistics ===")
+                print(f"mean_norm={embedding_stats['mean_norm']:.4f}, "
+                      f"intrinsic_dim_90={embedding_stats['intrinsic_dim_90']}")
+                
+                print(f"\n=== Computing Distortion Metrics ===")
+                distortion_metrics = compute_distortion_metrics(model, dataset, vocab)
+                print(f"Precision@5: {distortion_metrics['precision_at_5']:.4f}")
+                print(f"Precision@10: {distortion_metrics['precision_at_10']:.4f}")
+                print(f"Precision@20: {distortion_metrics['precision_at_20']:.4f}")
+                print(f"Rank Distortion: {distortion_metrics['rank_distortion']:.2f}")
+                
+                print(f"\n=== Geometric Quality Metrics ===")
+                geometric_metrics = compute_geometric_quality_metrics(model)
+                print(f"Isotropy Score: {geometric_metrics['isotropy_score']:.4f}")
+                print(f"Similarity Variance: {geometric_metrics['similarity_variance']:.4f}")
+                print(f"Triangle Violation Rate: {geometric_metrics['triangle_violation_rate']:.4f}")
+                
+                print(f"\n=== Capacity Metrics ===")
+                capacity_metrics = compute_capacity_metrics(model)
+                print(f"Participation Ratio: {capacity_metrics['participation_ratio']:.2f}")
+                print(f"Normalized PR: {capacity_metrics['normalized_participation_ratio']:.4f}")
                 
                 wandb.log({
                     'epoch': epoch,
@@ -183,6 +206,17 @@ def train_embeddings(
                     'stats/intrinsic_dim_90': embedding_stats['intrinsic_dim_90'],
                     'stats/intrinsic_dim_95': embedding_stats['intrinsic_dim_95'],
                     'stats/condition_number': embedding_stats['condition_number'],
+                    'distortion/precision_at_5': distortion_metrics['precision_at_5'],
+                    'distortion/precision_at_10': distortion_metrics['precision_at_10'],
+                    'distortion/precision_at_20': distortion_metrics['precision_at_20'],
+                    'distortion/rank_distortion': distortion_metrics['rank_distortion'],
+                    'geometry/isotropy_score': geometric_metrics['isotropy_score'],
+                    'geometry/similarity_variance': geometric_metrics['similarity_variance'],
+                    'geometry/similarity_mean': geometric_metrics['similarity_mean'],
+                    'geometry/triangle_violation_rate': geometric_metrics['triangle_violation_rate'],
+                    'geometry/triangle_mean_violation': geometric_metrics['triangle_mean_violation'],
+                    'capacity/participation_ratio': capacity_metrics['participation_ratio'],
+                    'capacity/normalized_participation_ratio': capacity_metrics['normalized_participation_ratio'],
                 })
                 
                 for cat, acc in category_accs.items():
