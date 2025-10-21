@@ -9,8 +9,12 @@ from datasets import load_dataset
 from tqdm import tqdm
 import math
 import wandb
+import sys
+from pathlib import Path
+from transformers import AutoTokenizer
 
-from .models import ManifoldTransformer
+sys.path.append(str(Path(__file__).parent.parent))
+from transformer_manifold.models import ManifoldTransformer
 from optimizers import ManifoldMuon, SphereOptimizer
 
 
@@ -32,11 +36,12 @@ class TextDataset(Dataset):
 
 
 def get_dataloaders(config):
-    """Load WikiText-2 dataset."""
-    dataset = load_dataset("wikitext", "wikitext-2-raw-v1") # change dataset if needed
+    """Load WikiText-2 dataset with proper character-level tokenization."""
+    dataset = load_dataset("wikitext", "wikitext-2-raw-v1")
     
     def tokenize(text):
-        return [min(ord(c), config.vocab_size - 1) for c in text]
+        """Convert text to character-level tokens (0-255)."""
+        return [ord(c) % 256 for c in text]
     
     train_text = ' '.join(dataset['train']['text'])
     val_text = ' '.join(dataset['validation']['text'])
@@ -44,11 +49,21 @@ def get_dataloaders(config):
     train_data = tokenize(train_text)
     val_data = tokenize(val_text)
     
-    train_dataset = TextDataset(train_data, config.max_seq_len, config.vocab_size)
-    val_dataset = TextDataset(val_data, config.max_seq_len, config.vocab_size)
+    train_dataset = TextDataset(train_data, config.max_seq_len, vocab_size=256)
+    val_dataset = TextDataset(val_data, config.max_seq_len, vocab_size=256)
     
-    train_loader = DataLoader(train_dataset, batch_size=config.batch_size, shuffle=True)
-    val_loader = DataLoader(val_dataset, batch_size=config.batch_size, shuffle=False)
+    train_loader = DataLoader(
+        train_dataset, 
+        batch_size=config.batch_size, 
+        shuffle=True,
+        num_workers=0
+    )
+    val_loader = DataLoader(
+        val_dataset, 
+        batch_size=config.batch_size, 
+        shuffle=False,
+        num_workers=0
+    )
     
     return train_loader, val_loader
 

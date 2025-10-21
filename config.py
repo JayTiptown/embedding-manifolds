@@ -8,7 +8,7 @@ class Config:
     n_layers = 4
     n_heads = 4
     d_ff = 1024
-    vocab_size = 10000
+    vocab_size = 256
     max_seq_len = 256
     dropout = 0.1
     

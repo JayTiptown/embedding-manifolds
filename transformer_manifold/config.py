@@ -11,7 +11,7 @@ from typing import Optional
 class TransformerManifoldConfig:
     """Configuration for manifold constraint experiments."""
     
-    vocab_size: int = 10000
+    vocab_size: int = 256
     d_model: int = 256
     n_layers: int = 4
     n_heads: int = 4

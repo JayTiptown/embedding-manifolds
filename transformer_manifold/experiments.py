@@ -4,8 +4,12 @@ Run all experiments and compare results.
 
 import json
 import torch
-from .config import get_experiment_configs
-from .train import train_manifold_transformer
+import sys
+from pathlib import Path
+
+sys.path.append(str(Path(__file__).parent.parent))
+from transformer_manifold.config import get_experiment_configs
+from transformer_manifold.train import train_manifold_transformer
 
 
 def run_all_experiments():
