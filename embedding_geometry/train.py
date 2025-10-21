@@ -10,7 +10,7 @@ from .evaluation import (evaluate_word_similarity, evaluate_analogies, compute_e
                          get_nearest_neighbors, compute_distortion_metrics, 
                          compute_geometric_quality_metrics, compute_capacity_metrics)
 from .visualization import log_embeddings_to_wandb, visualize_analogy, create_manifold_geometry_plot
-from optimizers import ManifoldMuon, SphereOptimizer
+from optimizers import ManifoldMuon, SphereOptimizer, ExponentialMapSphereOptimizer
 
 
 def train_epoch(model, dataloader, criterion, optimizer, epoch, device, log_interval=100, use_manifold_optimizer=False):
@@ -58,7 +58,8 @@ def train_embeddings(
     max_corpus_chars=1000000,
     eval_interval=1,
     device=None,
-    seed=42
+    seed=42,
+    use_geodesic=False
 ):
     """
     Train word embeddings on a manifold.
@@ -76,6 +77,7 @@ def train_embeddings(
         eval_interval: evaluate every N epochs
         device: device to train on
         seed: random seed
+        use_geodesic: if True, use exponential map for sphere (exact geodesic)
     """
     if device is None:
         if torch.cuda.is_available():
@@ -104,6 +106,7 @@ def train_embeddings(
             'num_negatives': num_negatives,
             'window_size': window_size,
             'min_freq': min_freq,
+            'use_geodesic': use_geodesic if manifold == 'sphere' else None,
         }
     )
     
@@ -132,9 +135,14 @@ def train_embeddings(
     
     use_manifold_optimizer = manifold in ['stiefel', 'sphere']
     if manifold == 'stiefel':
-        optimizer = ManifoldMuon(model.parameters(), lr=learning_rate)
+        optimizer = ManifoldMuon(model.parameters(), lr=learning_rate * 10)
     elif manifold == 'sphere':
-        optimizer = SphereOptimizer(model.parameters(), lr=learning_rate)
+        if use_geodesic:
+            print(f"Using exponential map (geodesic) optimizer for sphere")
+            optimizer = ExponentialMapSphereOptimizer(model.parameters(), lr=learning_rate * 20)
+        else:
+            print(f"Using retraction-based optimizer for sphere")
+            optimizer = SphereOptimizer(model.parameters(), lr=learning_rate * 20)
     else:
         optimizer = torch.optim.Adam(model.parameters(), lr=learning_rate)
     

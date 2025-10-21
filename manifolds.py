@@ -58,3 +58,50 @@ def sphere_tangent_projection(v, g):
     Projection: g - v(v^T g)
     """
     return g - v * (v * g).sum(dim=-1, keepdim=True)
+
+
+def sphere_geodesic_distance(v1, v2):
+    """
+    Compute geodesic distance on unit hypersphere.
+    Distance is the angle between vectors: d(v1, v2) = arccos(v1 · v2)
+    
+    Args:
+        v1, v2: unit norm vectors on hypersphere
+    
+    Returns:
+        geodesic distance (angle in radians)
+    """
+    dot_product = (v1 * v2).sum(dim=-1)
+    dot_product = torch.clamp(dot_product, -1.0, 1.0)
+    return torch.acos(dot_product)
+
+
+def sphere_exponential_map(v, tangent_vec):
+    """
+    Exponential map on unit hypersphere.
+    Maps tangent vector at v to point on sphere via geodesic.
+    
+    exp_v(ξ) = cos(||ξ||)v + sin(||ξ||)(ξ/||ξ||)
+    
+    Args:
+        v: base point on sphere (unit norm)
+        tangent_vec: tangent vector at v
+    
+    Returns:
+        point on sphere reached by following geodesic
+    """
+    with torch.no_grad():
+        norm = torch.norm(tangent_vec, dim=-1, keepdim=True)
+        
+        mask = norm.squeeze(-1) > 1e-8
+        result = v.clone()
+        
+        if mask.any():
+            cos_norm = torch.cos(norm)
+            sin_norm = torch.sin(norm)
+            direction = tangent_vec / (norm + 1e-8)
+            
+            result_new = cos_norm * v + sin_norm * direction
+            result[mask] = result_new[mask]
+        
+        return result

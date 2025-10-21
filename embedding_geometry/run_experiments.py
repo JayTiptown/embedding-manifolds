@@ -72,7 +72,8 @@ def run_single_experiment(
     max_corpus_chars=2000000,
     eval_interval=2,
     device=None,
-    seed=42
+    seed=42,
+    use_geodesic=False
 ):
     """Run a single experiment with specified parameters."""
     
@@ -100,7 +101,8 @@ def run_single_experiment(
         max_corpus_chars=max_corpus_chars,
         eval_interval=eval_interval,
         device=device,
-        seed=seed
+        seed=seed,
+        use_geodesic=use_geodesic
     )
     
     return model, vocab
@@ -147,6 +149,9 @@ def main():
     parser.add_argument('--seed', type=int, default=42,
                        help='Random seed (default: 42)')
     
+    parser.add_argument('--use-geodesic', action='store_true',
+                       help='Use exponential map (true geodesic) for sphere manifold')
+    
     args = parser.parse_args()
     
     if args.manifold == 'all':
@@ -168,7 +173,8 @@ def main():
             max_corpus_chars=args.max_corpus_chars,
             eval_interval=args.eval_interval,
             device=args.device,
-            seed=args.seed
+            seed=args.seed,
+            use_geodesic=args.use_geodesic
         )
 
 

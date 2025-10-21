@@ -99,6 +99,63 @@ class SphereOptimizer(Optimizer):
         return loss
 
 
+class ExponentialMapSphereOptimizer(Optimizer):
+    """
+    Sphere optimizer using exponential map (true geodesic).
+    
+    Uses the Riemannian exponential map: exp_v(ξ) = cos(||ξ||)v + sin(||ξ||)(ξ/||ξ||)
+    This follows exact geodesic curves (great circles) on the hypersphere.
+    """
+    def __init__(self, params, lr=0.01, momentum=0.9):
+        defaults = dict(lr=lr, momentum=momentum)
+        super().__init__(params, defaults)
+    
+    @torch.no_grad()
+    def step(self, closure=None):
+        loss = None
+        if closure is not None:
+            with torch.enable_grad():
+                loss = closure()
+        
+        for group in self.param_groups:
+            lr = group['lr']
+            momentum = group['momentum']
+            
+            for p in group['params']:
+                if p.grad is None:
+                    continue
+                
+                grad = p.grad
+                state = self.state[p]
+                
+                if len(state) == 0:
+                    state['momentum_buffer'] = torch.zeros_like(grad)
+                
+                buf = state['momentum_buffer']
+                
+                g_tan = sphere_tangent_projection(p, grad)
+                buf.mul_(momentum).add_(g_tan, alpha=1 - momentum)
+                
+                tangent_vec = -lr * buf
+                
+                tangent_norm = torch.norm(tangent_vec, dim=-1, keepdim=True)
+                
+                mask = tangent_norm.squeeze(-1) > 1e-8
+                
+                if mask.any():
+                    cos_theta = torch.cos(tangent_norm)
+                    sin_theta = torch.sin(tangent_norm)
+                    
+                    direction = tangent_vec / (tangent_norm + 1e-8)
+                    
+                    p_new = cos_theta * p + sin_theta * direction
+                    p[mask] = p_new[mask]
+                
+                p.copy_(p / (torch.norm(p, dim=-1, keepdim=True) + 1e-8))
+        
+        return loss
+
+
 class StandardMuon(Optimizer):
     """
     Standard Muon optimizer with spectral normalization of updates.
