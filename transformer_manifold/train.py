@@ -118,7 +118,7 @@ def train_epoch(model, train_loader, optimizer, config, epoch, use_manifold_proj
         
         scaler.scale(loss).backward()
         scaler.unscale_(optimizer)
-        torch.nn.utils.clip_grad_norm_(model.parameters(), 1.0)
+        torch.nn.utils.clip_grad_norm_(model.parameters(), config.grad_clip)
         scaler.step(optimizer)
         scaler.update()
         
@@ -197,7 +197,12 @@ def train_manifold_transformer(config):
     use_manifold_projection = False
     
     if optimizer_type == 'adam':
-        optimizer = torch.optim.Adam(model.parameters(), lr=config.learning_rate)
+        optimizer = torch.optim.AdamW(
+            model.parameters(), 
+            lr=config.learning_rate,
+            betas=(config.beta1, config.beta2),
+            weight_decay=config.weight_decay
+        )
     elif optimizer_type == 'manifold_muon':
         optimizer = ManifoldMuon(model.parameters(), lr=config.muon_lr)
     elif optimizer_type == 'sphere_optimizer':

@@ -12,15 +12,22 @@ from transformer_manifold.config import get_experiment_configs
 from transformer_manifold.train import train_manifold_transformer
 
 
-def run_all_experiments():
+def run_all_experiments(size='nano'):
     """
     Run all experiments: baseline, FFN-only, attention-only, full.
+    
+    Args:
+        size: 'micro', 'nano', or 'small'
     
     Returns:
         dict: {experiment_name: metrics_history}
     """
-    configs = get_experiment_configs()
+    configs = get_experiment_configs(size=size)
     all_results = {}
+    
+    print(f"\n{'='*80}")
+    print(f"Running {size.upper()} model experiments (~nanoGPT style)")
+    print(f"{'='*80}")
     
     for config in configs:
         name = config.get_name()
@@ -32,17 +39,17 @@ def run_all_experiments():
         model, metrics = train_manifold_transformer(config)
         all_results[name] = metrics
         
-        # Save results
-        with open(f"{name}_metrics.json", 'w') as f:
+        # Save results with size prefix
+        with open(f"{size}_{name}_metrics.json", 'w') as f:
             json.dump(metrics, f, indent=2)
     
     # Save all results
-    with open("all_experiments.json", 'w') as f:
+    with open(f"{size}_all_experiments.json", 'w') as f:
         json.dump(all_results, f, indent=2)
     
     # Print summary
     print("\n" + "="*80)
-    print("EXPERIMENT SUMMARY")
+    print(f"EXPERIMENT SUMMARY ({size.upper()})")
     print("="*80)
     
     for name, metrics in all_results.items():
@@ -50,11 +57,19 @@ def run_all_experiments():
         print(f"\n{name}:")
         print(f"  Final val loss: {final['val_loss']:.4f}")
         print(f"  Final perplexity: {final['perplexity']:.2f}")
-        print(f"  Mean condition number: {final['cond_mean']:.2f}")
-        print(f"  Max condition number: {final['cond_max']:.2f}")
+        if 'cond_mean' in final:
+            print(f"  Mean condition number: {final['cond_mean']:.2f}")
+            print(f"  Max condition number: {final['cond_max']:.2f}")
     
     return all_results
 
 
 if __name__ == '__main__':
-    run_all_experiments()
+    import argparse
+    parser = argparse.ArgumentParser(description='Run manifold constraint experiments')
+    parser.add_argument('--size', type=str, default='nano',
+                       choices=['micro', 'nano', 'small'],
+                       help='Model size: micro (~3M), nano (~10M), small (~50M)')
+    args = parser.parse_args()
+    
+    run_all_experiments(size=args.size)
