@@ -43,11 +43,13 @@ def get_dataloaders(config):
         """Convert text to character-level tokens (0-255)."""
         return [ord(c) % 256 for c in text]
     
-    train_text = ' '.join(dataset['train']['text'])
-    val_text = ' '.join(dataset['validation']['text'])
+    train_data = []
+    for text in dataset['train']['text']:
+        train_data.extend(tokenize(text))
     
-    train_data = tokenize(train_text)
-    val_data = tokenize(val_text)
+    val_data = []
+    for text in dataset['validation']['text']:
+        val_data.extend(tokenize(text))
     
     train_dataset = TextDataset(train_data, config.max_seq_len, vocab_size=256)
     val_dataset = TextDataset(val_data, config.max_seq_len, vocab_size=256)
@@ -57,14 +59,16 @@ def get_dataloaders(config):
         batch_size=config.batch_size, 
         shuffle=True,
         num_workers=8,
-        pin_memory=True
+        pin_memory=True,
+        persistent_workers=True
     )
     val_loader = DataLoader(
         val_dataset, 
         batch_size=config.batch_size, 
         shuffle=False,
         num_workers=4,
-        pin_memory=True
+        pin_memory=True,
+        persistent_workers=True
     )
     
     return train_loader, val_loader
@@ -82,7 +86,10 @@ def evaluate(model, val_loader, config):
             break
         
         x, y = x.to(config.device), y.to(config.device)
-        _, loss = model(x, y)
+        
+        with torch.amp.autocast(device_type='cuda', dtype=torch.bfloat16):
+            _, loss = model(x, y)
+        
         total_loss += loss.item()
         num_batches += 1
     
@@ -92,7 +99,7 @@ def evaluate(model, val_loader, config):
     return avg_loss, perplexity
 
 
-def train_epoch(model, train_loader, optimizer, config, epoch, use_manifold_projection):
+def train_epoch(model, train_loader, optimizer, config, epoch, use_manifold_projection, scaler):
     """Train for one epoch."""
     model.train()
     total_loss = 0
@@ -103,12 +110,15 @@ def train_epoch(model, train_loader, optimizer, config, epoch, use_manifold_proj
         x, y = x.to(config.device), y.to(config.device)
         
         optimizer.zero_grad()
-        _, loss = model(x, y)
-        loss.backward()
         
+        with torch.amp.autocast(device_type='cuda', dtype=torch.bfloat16):
+            _, loss = model(x, y)
+        
+        scaler.scale(loss).backward()
+        scaler.unscale_(optimizer)
         torch.nn.utils.clip_grad_norm_(model.parameters(), 1.0)
-        
-        optimizer.step()
+        scaler.step(optimizer)
+        scaler.update()
         
         if use_manifold_projection:
             model.project_to_manifold()
@@ -190,12 +200,14 @@ def train_manifold_transformer(config):
     if optimizer_type == 'adam' and (config.constraint_ffn or config.constraint_attention):
         use_manifold_projection = True
     
+    scaler = torch.amp.GradScaler('cuda')
+    
     metrics_history = []
     best_val_loss = float('inf')
     
     print("\nStarting training...")
     for epoch in range(1, config.num_epochs + 1):
-        train_loss = train_epoch(model, train_loader, optimizer, config, epoch, use_manifold_projection)
+        train_loss = train_epoch(model, train_loader, optimizer, config, epoch, use_manifold_projection, scaler)
         val_loss, perplexity = evaluate(model, val_loader, config)
         
         should_log_cond = (epoch % 5 == 0) or (epoch == 1)
