@@ -99,7 +99,7 @@ def evaluate(model, val_loader, config):
     return avg_loss, perplexity
 
 
-def train_epoch(model, train_loader, optimizer, config, epoch, use_manifold_projection, scaler):
+def train_epoch(model, train_loader, optimizer, config, epoch, use_manifold_projection, scaler, scheduler):
     """Train for one epoch."""
     model.train()
     total_loss = 0
@@ -126,7 +126,11 @@ def train_epoch(model, train_loader, optimizer, config, epoch, use_manifold_proj
         total_loss += loss.item()
         num_batches += 1
         
-        pbar.set_postfix({'loss': total_loss / num_batches})
+        current_lr = optimizer.param_groups[0]['lr']
+        pbar.set_postfix({'loss': total_loss / num_batches, 'lr': f'{current_lr:.2e}'})
+    
+    if scheduler is not None:
+        scheduler.step()
     
     return total_loss / num_batches
 
@@ -204,6 +208,20 @@ def train_manifold_transformer(config):
     if optimizer_type == 'adam' and (config.constraint_ffn or config.constraint_attention):
         use_manifold_projection = True
     
+    scheduler = None
+    if optimizer_type == 'adam':
+        warmup_steps = config.warmup_epochs
+        total_steps = config.num_epochs
+        
+        def lr_lambda(epoch):
+            if epoch < warmup_steps:
+                return (epoch + 1) / warmup_steps
+            progress = (epoch - warmup_steps) / (total_steps - warmup_steps)
+            return config.min_lr / config.learning_rate + (1 - config.min_lr / config.learning_rate) * 0.5 * (1 + math.cos(math.pi * progress))
+        
+        scheduler = torch.optim.lr_scheduler.LambdaLR(optimizer, lr_lambda)
+        print(f"Using cosine LR schedule with {warmup_steps} epoch warmup")
+    
     scaler = torch.amp.GradScaler('cuda')
     
     metrics_history = []
@@ -211,7 +229,7 @@ def train_manifold_transformer(config):
     
     print("\nStarting training...")
     for epoch in range(1, config.num_epochs + 1):
-        train_loss = train_epoch(model, train_loader, optimizer, config, epoch, use_manifold_projection, scaler)
+        train_loss = train_epoch(model, train_loader, optimizer, config, epoch, use_manifold_projection, scaler, scheduler)
         val_loss, perplexity = evaluate(model, val_loader, config)
         
         should_log_cond = (epoch % 5 == 0) or (epoch == 1)
@@ -239,6 +257,7 @@ def train_manifold_transformer(config):
             'train/loss': train_loss,
             'val/loss': val_loss,
             'val/perplexity': perplexity,
+            'learning_rate': optimizer.param_groups[0]['lr'],
         }
         
         if should_log_cond:

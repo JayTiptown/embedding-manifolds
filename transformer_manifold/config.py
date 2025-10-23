@@ -23,6 +23,8 @@ class TransformerManifoldConfig:
     num_epochs: int = 10
     learning_rate: float = 1e-4
     muon_lr: float = 0.01
+    warmup_epochs: int = 1
+    min_lr: float = 1e-5
     
     eval_interval: int = 100
     eval_iters: int = 200
