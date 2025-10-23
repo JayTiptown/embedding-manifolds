@@ -12,17 +12,17 @@ class TransformerManifoldConfig:
     """Configuration for manifold constraint experiments."""
     
     vocab_size: int = 256
-    d_model: int = 256
-    n_layers: int = 4
-    n_heads: int = 4
-    d_ff: int = 1024
-    max_seq_len: int = 256
+    d_model: int = 768
+    n_layers: int = 12
+    n_heads: int = 12
+    d_ff: int = 3072
+    max_seq_len: int = 512
     dropout: float = 0.1
     
-    batch_size: int = 32
+    batch_size: int = 128
     num_epochs: int = 10
-    learning_rate: float = 3e-4
-    muon_lr: float = 0.02
+    learning_rate: float = 1e-4
+    muon_lr: float = 0.01
     
     eval_interval: int = 100
     eval_iters: int = 50

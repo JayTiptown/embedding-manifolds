@@ -56,13 +56,15 @@ def get_dataloaders(config):
         train_dataset, 
         batch_size=config.batch_size, 
         shuffle=True,
-        num_workers=0
+        num_workers=8,
+        pin_memory=True
     )
     val_loader = DataLoader(
         val_dataset, 
         batch_size=config.batch_size, 
         shuffle=False,
-        num_workers=0
+        num_workers=4,
+        pin_memory=True
     )
     
     return train_loader, val_loader
@@ -196,39 +198,51 @@ def train_manifold_transformer(config):
         train_loss = train_epoch(model, train_loader, optimizer, config, epoch, use_manifold_projection)
         val_loss, perplexity = evaluate(model, val_loader, config)
         
-        cond_stats = model.get_condition_number_stats()
+        should_log_cond = (epoch % 5 == 0) or (epoch == 1)
         
         metrics = {
             'epoch': epoch,
             'train_loss': train_loss,
             'val_loss': val_loss,
             'perplexity': perplexity,
-            'cond_mean': cond_stats['mean'],
-            'cond_max': cond_stats['max'],
-            'cond_min': cond_stats['min'],
-            'cond_std': cond_stats['std'],
         }
+        
+        if should_log_cond:
+            cond_stats = model.get_condition_number_stats()
+            metrics.update({
+                'cond_mean': cond_stats['mean'],
+                'cond_max': cond_stats['max'],
+                'cond_min': cond_stats['min'],
+                'cond_std': cond_stats['std'],
+            })
+        
         metrics_history.append(metrics)
         
-        wandb.log({
+        log_dict = {
             'epoch': epoch,
             'train/loss': train_loss,
             'val/loss': val_loss,
             'val/perplexity': perplexity,
-            'condition_number/mean': cond_stats['mean'],
-            'condition_number/max': cond_stats['max'],
-            'condition_number/min': cond_stats['min'],
-            'condition_number/std': cond_stats['std'],
-        })
+        }
         
-        for layer_name, cond in cond_stats['by_layer'].items():
-            wandb.log({f'condition_number/{layer_name}': cond})
+        if should_log_cond:
+            log_dict.update({
+                'condition_number/mean': cond_stats['mean'],
+                'condition_number/max': cond_stats['max'],
+                'condition_number/min': cond_stats['min'],
+                'condition_number/std': cond_stats['std'],
+            })
+            for layer_name, cond in cond_stats['by_layer'].items():
+                log_dict[f'condition_number/{layer_name}'] = cond
+        
+        wandb.log(log_dict)
         
         print(f"\nEpoch {epoch}:")
         print(f"  Train loss: {train_loss:.4f}")
         print(f"  Val loss: {val_loss:.4f}")
         print(f"  Perplexity: {perplexity:.2f}")
-        print(f"  Condition number: mean={cond_stats['mean']:.2f}, max={cond_stats['max']:.2f}")
+        if should_log_cond:
+            print(f"  Condition number: mean={cond_stats['mean']:.2f}, max={cond_stats['max']:.2f}")
         
         if val_loss < best_val_loss:
             best_val_loss = val_loss
