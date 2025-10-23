@@ -60,7 +60,8 @@ def get_dataloaders(config):
         shuffle=True,
         num_workers=8,
         pin_memory=True,
-        persistent_workers=True
+        persistent_workers=True,
+        prefetch_factor=2
     )
     val_loader = DataLoader(
         val_dataset, 
@@ -68,7 +69,8 @@ def get_dataloaders(config):
         shuffle=False,
         num_workers=4,
         pin_memory=True,
-        persistent_workers=True
+        persistent_workers=True,
+        prefetch_factor=2
     )
     
     return train_loader, val_loader
@@ -85,7 +87,7 @@ def evaluate(model, val_loader, config):
         if batch_idx >= config.eval_iters:
             break
         
-        x, y = x.to(config.device), y.to(config.device)
+        x, y = x.to(config.device, non_blocking=True), y.to(config.device, non_blocking=True)
         
         with torch.amp.autocast(device_type='cuda', dtype=torch.bfloat16):
             _, loss = model(x, y)
@@ -107,9 +109,9 @@ def train_epoch(model, train_loader, optimizer, config, epoch, use_manifold_proj
     
     pbar = tqdm(train_loader, desc=f"Epoch {epoch}")
     for x, y in pbar:
-        x, y = x.to(config.device), y.to(config.device)
+        x, y = x.to(config.device, non_blocking=True), y.to(config.device, non_blocking=True)
         
-        optimizer.zero_grad()
+        optimizer.zero_grad(set_to_none=True)
         
         with torch.amp.autocast(device_type='cuda', dtype=torch.bfloat16):
             _, loss = model(x, y)
@@ -152,6 +154,9 @@ def train_manifold_transformer(config):
     
     if torch.cuda.is_available():
         config.device = 'cuda'
+        torch.backends.cudnn.benchmark = True
+        torch.backends.cuda.matmul.allow_tf32 = True
+        torch.backends.cudnn.allow_tf32 = True
     elif torch.backends.mps.is_available():
         config.device = 'mps'
     else:
