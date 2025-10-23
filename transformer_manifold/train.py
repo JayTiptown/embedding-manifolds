@@ -155,8 +155,8 @@ def train_manifold_transformer(config):
     if torch.cuda.is_available():
         config.device = 'cuda'
         torch.backends.cudnn.benchmark = True
-        torch.backends.cuda.matmul.allow_tf32 = True
-        torch.backends.cudnn.allow_tf32 = True
+        torch.backends.cuda.matmul.fp32_precision = 'tf32'
+        torch.backends.cudnn.conv.fp32_precision = 'tf32'
     elif torch.backends.mps.is_available():
         config.device = 'mps'
     else:
@@ -187,10 +187,6 @@ def train_manifold_transformer(config):
     
     print("Creating model...")
     model = ManifoldTransformer(config).to(config.device)
-    
-    if config.device == 'cuda':
-        model = torch.compile(model, mode='max-autotune')
-        print("Model compiled with torch.compile")
     
     total_params = sum(p.numel() for p in model.parameters())
     print(f"Total parameters: {total_params:,}")
