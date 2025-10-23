@@ -179,6 +179,10 @@ def train_manifold_transformer(config):
     print("Creating model...")
     model = ManifoldTransformer(config).to(config.device)
     
+    if config.device == 'cuda':
+        model = torch.compile(model, mode='max-autotune')
+        print("Model compiled with torch.compile")
+    
     total_params = sum(p.numel() for p in model.parameters())
     print(f"Total parameters: {total_params:,}")
     

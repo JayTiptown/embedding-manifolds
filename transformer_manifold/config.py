@@ -25,7 +25,7 @@ class TransformerManifoldConfig:
     muon_lr: float = 0.01
     
     eval_interval: int = 100
-    eval_iters: int = 50
+    eval_iters: int = 200
     
 
     constraint_ffn: bool = False 
