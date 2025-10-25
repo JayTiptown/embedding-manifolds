@@ -22,17 +22,13 @@ def matrix_sign(W, max_iter=20, tol=1e-6):
 
 def stiefel_project(W):
     """
-    Project matrix W to Stiefel manifold using matrix sign.
-    Returns W @ sign(W^T W)^{-1/2}
+    Project matrix W to Stiefel manifold using polar decomposition.
+    Returns U @ V^H where W = U S V^H (SVD of W).
+    This is numerically stable and equivalent to W @ (W^T W)^{-1/2}.
     """
     with torch.no_grad():
-        WtW = W.T @ W
-        sign_WtW = matrix_sign(WtW)
-        
-        U, S, Vh = torch.linalg.svd(sign_WtW, full_matrices=False)
-        inv_sqrt = U @ torch.diag(1.0 / torch.sqrt(S + 1e-8)) @ Vh
-        
-        return W @ inv_sqrt
+        U, S, Vh = torch.linalg.svd(W, full_matrices=False)
+        return U @ Vh
 
 
 def sphere_project(v):
@@ -47,8 +43,8 @@ def stiefel_tangent_projection(W, G):
     T_W(Stiefel) = {G : W^T G + G^T W = 0}
     Projection: G - W(W^T G + G^T W)/2
     """
-    sym = W.T @ G
-    return G - W @ (sym + sym.T) / 2
+    sym = W.mT @ G
+    return G - W @ (sym + sym.mT) / 2
 
 
 def sphere_tangent_projection(v, g):

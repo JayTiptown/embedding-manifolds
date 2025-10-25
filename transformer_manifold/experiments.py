@@ -12,17 +12,22 @@ from transformer_manifold.config import get_experiment_configs
 from transformer_manifold.train import train_manifold_transformer
 
 
-def run_all_experiments(size='nano'):
+def run_all_experiments(size='nano', skip_baseline=False):
     """
     Run all experiments: baseline, FFN-only, attention-only, full.
     
     Args:
         size: 'micro', 'nano', or 'small'
+        skip_baseline: if True, skip the Euclidean baseline experiment
     
     Returns:
         dict: {experiment_name: metrics_history}
     """
     configs = get_experiment_configs(size=size)
+    
+    if skip_baseline:
+        configs = configs[1:]
+    
     all_results = {}
     
     print(f"\n{'='*80}")
@@ -70,6 +75,8 @@ if __name__ == '__main__':
     parser.add_argument('--size', type=str, default='nano',
                        choices=['micro', 'nano', 'small'],
                        help='Model size: micro (~3M), nano (~10M), small (~50M)')
+    parser.add_argument('--skip-baseline', action='store_true',
+                       help='Skip the Euclidean baseline experiment')
     args = parser.parse_args()
     
-    run_all_experiments(size=args.size)
+    run_all_experiments(size=args.size, skip_baseline=args.skip_baseline)
