@@ -17,7 +17,7 @@ def run_all_experiments(size='nano', skip_baseline=False):
     Run all experiments: baseline, FFN-only, attention-only, full.
     
     Args:
-        size: 'micro', 'nano', or 'small'
+        size: 'tiny', 'micro', 'nano', or 'small'
         skip_baseline: if True, skip the Euclidean baseline experiment
     
     Returns:
@@ -73,8 +73,8 @@ if __name__ == '__main__':
     import argparse
     parser = argparse.ArgumentParser(description='Run manifold constraint experiments')
     parser.add_argument('--size', type=str, default='nano',
-                       choices=['micro', 'nano', 'small'],
-                       help='Model size: micro (~3M), nano (~10M), small (~50M)')
+                       choices=['tiny', 'micro', 'nano', 'small'],
+                       help='Model size: tiny (~500K), micro (~3M), nano (~10M), small (~50M)')
     parser.add_argument('--skip-baseline', action='store_true',
                        help='Skip the Euclidean baseline experiment')
     args = parser.parse_args()

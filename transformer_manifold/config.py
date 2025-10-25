@@ -102,6 +102,24 @@ def get_nano_config(**overrides):
     )
 
 
+def get_tiny_config(**overrides):
+    """
+    Tiny config for rapid iteration (~500K params).
+    Fast enough to iterate on code changes quickly.
+    """
+    return TransformerManifoldConfig(
+        d_model=128,
+        n_layers=2,
+        n_heads=2,
+        d_ff=512,
+        max_seq_len=128,
+        batch_size=128,
+        gradient_accumulation_steps=2,
+        num_epochs=3,
+        **overrides
+    )
+
+
 def get_micro_config(**overrides):
     """
     Micro config for fast testing (~3M params).
@@ -140,7 +158,7 @@ def get_experiment_configs(size='nano'):
     Generate all experiment configurations.
     
     Args:
-        size: 'micro', 'nano', or 'small'
+        size: 'tiny', 'micro', 'nano', or 'small'
     
     Experiments (in order of complexity):
     1. Baseline: No constraints (Euclidean)
@@ -148,14 +166,16 @@ def get_experiment_configs(size='nano'):
     3. Attention-only: Constrain Q,K,V projections
     4. Full: Constrain both FFN and attention
     """
-    if size == 'micro':
+    if size == 'tiny':
+        config_fn = get_tiny_config
+    elif size == 'micro':
         config_fn = get_micro_config
     elif size == 'nano':
         config_fn = get_nano_config
     elif size == 'small':
         config_fn = get_small_config
     else:
-        raise ValueError(f"Unknown size: {size}. Choose 'micro', 'nano', or 'small'")
+        raise ValueError(f"Unknown size: {size}. Choose 'tiny', 'micro', 'nano', or 'small'")
     
     configs = [
         config_fn(
