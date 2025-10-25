@@ -29,6 +29,7 @@ class TransformerManifoldConfig:
     bias: bool = True
     
     batch_size: int = 64
+    gradient_accumulation_steps: int = 1
     num_epochs: int = 10
     learning_rate: float = 6e-4
     muon_lr: float = 0.02
@@ -38,6 +39,10 @@ class TransformerManifoldConfig:
     beta1: float = 0.9
     beta2: float = 0.95
     grad_clip: float = 1.0
+    
+    projection_frequency: int = 10
+    compile_model: bool = False
+    track_condition_numbers: bool = True
     
     eval_interval: int = 500
     eval_iters: int = 200
@@ -92,6 +97,7 @@ def get_nano_config(**overrides):
         d_ff=1536,
         max_seq_len=256,
         batch_size=64,
+        gradient_accumulation_steps=4,
         **overrides
     )
 
@@ -107,6 +113,7 @@ def get_micro_config(**overrides):
         d_ff=1024,
         max_seq_len=256,
         batch_size=64,
+        gradient_accumulation_steps=4,
         num_epochs=5,
         **overrides
     )
@@ -123,6 +130,7 @@ def get_small_config(**overrides):
         d_ff=3072,
         max_seq_len=512,
         batch_size=32,
+        gradient_accumulation_steps=8,
         **overrides
     )
 

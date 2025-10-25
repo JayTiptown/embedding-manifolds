@@ -64,11 +64,10 @@ class ManifoldLinear(nn.Module):
         with torch.no_grad():
             if self.weight.dim() < 2:
                 return None
-            try:
-                S = torch.linalg.svdvals(self.weight)
-                return (S.max() / (S.min() + 1e-8)).item()
-            except:
+            S = torch.linalg.svdvals(self.weight)
+            if S.numel() == 0:
                 return None
+            return (S[0] / (S[-1] + 1e-8)).item()
 
 
 class MultiHeadAttention(nn.Module):
@@ -241,19 +240,21 @@ class ManifoldTransformer(nn.Module):
         
         return cond_numbers
     
+    @torch.no_grad()
     def get_condition_number_stats(self):
         """Get statistics about condition numbers."""
         cond_numbers = self.get_all_condition_numbers()
         
         if not cond_numbers:
-            return {'mean': 0, 'max': 0, 'min': 0, 'std': 0}
+            return {'mean': 0, 'max': 0, 'min': 0, 'std': 0, 'by_layer': {}}
         
         values = list(cond_numbers.values())
+        mean_val = sum(values) / len(values)
         return {
-            'mean': sum(values) / len(values),
+            'mean': mean_val,
             'max': max(values),
             'min': min(values),
-            'std': (sum((x - sum(values)/len(values))**2 for x in values) / len(values)) ** 0.5,
+            'std': (sum((x - mean_val)**2 for x in values) / len(values)) ** 0.5,
             'count': len(values),
             'by_layer': cond_numbers
         }

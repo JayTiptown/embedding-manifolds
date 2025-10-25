@@ -102,30 +102,40 @@ def evaluate(model, val_loader, config):
 
 
 def train_epoch(model, train_loader, optimizer, config, epoch, use_manifold_projection, scaler, scheduler):
-    """Train for one epoch."""
+    """Train for one epoch with gradient accumulation."""
     model.train()
     total_loss = 0
     num_batches = 0
     
+    grad_accum_steps = config.gradient_accumulation_steps
+    projection_freq = config.projection_frequency
+    
     pbar = tqdm(train_loader, desc=f"Epoch {epoch}")
-    for x, y in pbar:
+    for batch_idx, (x, y) in enumerate(pbar):
         x, y = x.to(config.device, non_blocking=True), y.to(config.device, non_blocking=True)
         
-        optimizer.zero_grad(set_to_none=True)
+        is_accumulating = (batch_idx + 1) % grad_accum_steps != 0
         
         with torch.amp.autocast(device_type='cuda', dtype=torch.bfloat16):
             _, loss = model(x, y)
+            loss = loss / grad_accum_steps
         
         scaler.scale(loss).backward()
-        scaler.unscale_(optimizer)
-        torch.nn.utils.clip_grad_norm_(model.parameters(), config.grad_clip)
-        scaler.step(optimizer)
-        scaler.update()
         
-        if use_manifold_projection:
-            model.project_to_manifold()
+        if not is_accumulating:
+            scaler.unscale_(optimizer)
+            torch.nn.utils.clip_grad_norm_(model.parameters(), config.grad_clip)
+            scaler.step(optimizer)
+            scaler.update()
+            optimizer.zero_grad(set_to_none=True)
+            
+            if use_manifold_projection and (batch_idx + 1) % (grad_accum_steps * projection_freq) == 0:
+                if hasattr(model, '_orig_mod'):
+                    model._orig_mod.project_to_manifold()
+                else:
+                    model.project_to_manifold()
         
-        total_loss += loss.item()
+        total_loss += loss.item() * grad_accum_steps
         num_batches += 1
         
         current_lr = optimizer.param_groups[0]['lr']
@@ -188,6 +198,12 @@ def train_manifold_transformer(config):
     print("Creating model...")
     model = ManifoldTransformer(config).to(config.device)
     
+    if config.compile_model and hasattr(torch, 'compile'):
+        print("Attempting to compile model with torch.compile()...")
+        compiled_model = torch.compile(model)
+        print("Model compilation successful!")
+        model = compiled_model
+    
     total_params = sum(p.numel() for p in model.parameters())
     print(f"Total parameters: {total_params:,}")
     
@@ -238,7 +254,7 @@ def train_manifold_transformer(config):
         train_loss = train_epoch(model, train_loader, optimizer, config, epoch, use_manifold_projection, scaler, scheduler)
         val_loss, perplexity = evaluate(model, val_loader, config)
         
-        should_log_cond = (epoch % 5 == 0) or (epoch == 1)
+        should_log_cond = config.track_condition_numbers and ((epoch % 10 == 0) or (epoch == 1))
         
         metrics = {
             'epoch': epoch,
@@ -247,8 +263,11 @@ def train_manifold_transformer(config):
             'perplexity': perplexity,
         }
         
-        if should_log_cond:
-            cond_stats = model.get_condition_number_stats()
+        if should_log_cond and hasattr(model, 'get_condition_number_stats'):
+            if hasattr(model, '_orig_mod'):
+                cond_stats = model._orig_mod.get_condition_number_stats()
+            else:
+                cond_stats = model.get_condition_number_stats()
             metrics.update({
                 'cond_mean': cond_stats['mean'],
                 'cond_max': cond_stats['max'],
@@ -266,7 +285,7 @@ def train_manifold_transformer(config):
             'learning_rate': optimizer.param_groups[0]['lr'],
         }
         
-        if should_log_cond:
+        if should_log_cond and 'cond_mean' in metrics:
             log_dict.update({
                 'condition_number/mean': cond_stats['mean'],
                 'condition_number/max': cond_stats['max'],
